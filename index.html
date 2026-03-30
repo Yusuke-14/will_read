@@ -20,7 +20,7 @@
     </header>
 
     <!-- 画面全体の切り替えタブ -->
-    <!-- 普段使う一覧画面と、利用頻度の低いバックアップ画面を分ける -->
+    <!-- 普段使う一覧画面と、設定系の画面を分ける -->
     <section class="page-mode-section">
       <div class="page-mode-tabs" role="tablist" aria-label="画面切り替え">
         <button
@@ -30,6 +30,15 @@
           aria-pressed="true"
         >
           本の管理
+        </button>
+
+        <button
+          id="show-category-page-button"
+          class="tab-button"
+          type="button"
+          aria-pressed="false"
+        >
+          カテゴリの編集
         </button>
 
         <button
@@ -45,30 +54,6 @@
 
     <main>
       <div id="main-page-content">
-      <!-- カテゴリ追加エリア -->
-      <section class="category-section">
-        <h2>カテゴリを追加</h2>
-
-        <!-- 新しいカテゴリ名を入力するフォーム -->
-        <form id="category-form" class="category-form">
-          <input
-            id="category-name"
-            name="categoryName"
-            type="text"
-            placeholder="例：小説"
-          >
-          <button type="submit" class="sub-button">カテゴリ追加</button>
-        </form>
-
-        <!-- カテゴリ削除モードの切り替えボタン -->
-        <button id="toggle-category-delete-button" type="button" class="sub-button secondary-button">
-          カテゴリ消去
-        </button>
-
-        <!-- 登録済みカテゴリを表示する場所 -->
-        <div id="category-list" class="category-list"></div>
-      </section>
-
       <!-- 未読 / 読破 の切り替えUI -->
       <section class="list-mode-section">
         <div class="list-mode-tabs" role="tablist" aria-label="本の一覧切り替え">
@@ -129,8 +114,34 @@
       </section>
       </div>
 
+      <!-- カテゴリ編集専用画面 -->
+      <section id="category-page-content" class="category-page hidden">
+        <!-- カテゴリ管理エリア -->
+        <section class="category-section">
+          <h2>カテゴリを追加</h2>
+
+          <!-- 新しいカテゴリ名を入力するフォーム -->
+          <form id="category-form" class="category-form">
+            <input
+              id="category-name"
+              name="categoryName"
+              type="text"
+              placeholder="例：小説"
+            >
+            <button type="submit" class="sub-button">カテゴリ追加</button>
+          </form>
+
+          <!-- カテゴリ削除モードの切り替えボタン -->
+          <button id="toggle-category-delete-button" type="button" class="sub-button secondary-button">
+            カテゴリ消去
+          </button>
+
+          <!-- 登録済みカテゴリを表示する場所 -->
+          <div id="category-list" class="category-list"></div>
+        </section>
+      </section>
+
       <!-- バックアップ専用画面 -->
-      <!-- 利用頻度が低い機能なので、別画面に分離して普段の操作画面をすっきりさせる -->
       <section id="backup-page-content" class="backup-page hidden">
         <div class="backup-section">
           <h2>バックアップ</h2>

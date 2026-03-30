@@ -15,7 +15,7 @@ const FALLBACK_CATEGORY = "その他";
 let currentListMode = "unread";
 
 // 今どちらのページを表示しているか
-// main = 通常画面, backup = バックアップ画面
+// main = 通常画面, category = カテゴリ編集画面, backup = バックアップ画面
 let currentPageMode = "main";
 
 // 詳細モーダルで開いている本IDを保存する
@@ -42,8 +42,10 @@ const importBackupButton = document.getElementById("import-backup-button");
 const showUnreadButton = document.getElementById("show-unread-button");
 const showReadButton = document.getElementById("show-read-button");
 const showMainPageButton = document.getElementById("show-main-page-button");
+const showCategoryPageButton = document.getElementById("show-category-page-button");
 const showBackupPageButton = document.getElementById("show-backup-page-button");
 const mainPageContent = document.getElementById("main-page-content");
+const categoryPageContent = document.getElementById("category-page-content");
 const backupPageContent = document.getElementById("backup-page-content");
 
 const formModal = document.getElementById("form-modal");
@@ -100,6 +102,11 @@ function setupEvents() {
   // バックアップ機能は別画面へ移したので、ここで表示を切り替える
   showMainPageButton.addEventListener("click", function () {
     currentPageMode = "main";
+    updatePageModeTabs();
+  });
+
+  showCategoryPageButton.addEventListener("click", function () {
+    currentPageMode = "category";
     updatePageModeTabs();
   });
 
@@ -768,16 +775,20 @@ function updateListModeTabs() {
 
 function updatePageModeTabs() {
   const mainActive = currentPageMode === "main";
+  const categoryActive = currentPageMode === "category";
   const backupActive = currentPageMode === "backup";
 
   showMainPageButton.classList.toggle("active", mainActive);
+  showCategoryPageButton.classList.toggle("active", categoryActive);
   showBackupPageButton.classList.toggle("active", backupActive);
 
   showMainPageButton.setAttribute("aria-pressed", String(mainActive));
+  showCategoryPageButton.setAttribute("aria-pressed", String(categoryActive));
   showBackupPageButton.setAttribute("aria-pressed", String(backupActive));
 
   // 表示そのものは hidden の付け外しだけにして、既存構造を大きく変えない
   mainPageContent.classList.toggle("hidden", !mainActive);
+  categoryPageContent.classList.toggle("hidden", !categoryActive);
   backupPageContent.classList.toggle("hidden", !backupActive);
 }
 

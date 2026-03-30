@@ -14,6 +14,10 @@ const FALLBACK_CATEGORY = "その他";
 // unread = 未読, read = 読破
 let currentListMode = "unread";
 
+// 今どちらのページを表示しているか
+// main = 通常画面, backup = バックアップ画面
+let currentPageMode = "main";
+
 // 詳細モーダルで開いている本IDを保存する
 let currentDetailBookId = null;
 
@@ -31,9 +35,16 @@ const categoryList = document.getElementById("category-list");
 const categoryForm = document.getElementById("category-form");
 const categoryNameInput = document.getElementById("category-name");
 const toggleCategoryDeleteButton = document.getElementById("toggle-category-delete-button");
+const exportBackupButton = document.getElementById("export-backup-button");
+const importBackupFile = document.getElementById("import-backup-file");
+const importBackupButton = document.getElementById("import-backup-button");
 
 const showUnreadButton = document.getElementById("show-unread-button");
 const showReadButton = document.getElementById("show-read-button");
+const showMainPageButton = document.getElementById("show-main-page-button");
+const showBackupPageButton = document.getElementById("show-backup-page-button");
+const mainPageContent = document.getElementById("main-page-content");
+const backupPageContent = document.getElementById("backup-page-content");
 
 const formModal = document.getElementById("form-modal");
 const formModalTitle = document.getElementById("form-modal-title");
@@ -67,6 +78,7 @@ function initialize() {
   renderCategoryList();
   renderBooks();
   updateListModeTabs();
+  updatePageModeTabs();
 }
 
 function setupEvents() {
@@ -77,11 +89,24 @@ function setupEvents() {
   bookForm.addEventListener("submit", handleBookSubmit);
   categoryForm.addEventListener("submit", handleCategorySubmit);
   toggleCategoryDeleteButton.addEventListener("click", toggleCategoryDeleteMode);
+  exportBackupButton.addEventListener("click", exportBackupData);
+  importBackupButton.addEventListener("click", importBackupData);
 
   sortSelect.addEventListener("change", renderBooks);
 
   // 絞り込み変更時に一覧を再描画する
   filterCategorySelect.addEventListener("change", renderBooks);
+
+  // バックアップ機能は別画面へ移したので、ここで表示を切り替える
+  showMainPageButton.addEventListener("click", function () {
+    currentPageMode = "main";
+    updatePageModeTabs();
+  });
+
+  showBackupPageButton.addEventListener("click", function () {
+    currentPageMode = "backup";
+    updatePageModeTabs();
+  });
 
   // 既存の切り替え機能はそのまま使い、見た目だけタブ風にする
   showUnreadButton.addEventListener("click", function () {
@@ -309,6 +334,97 @@ function handleCategorySubmit(event) {
   renderCategoryFilterOptions();
   renderCategoryList();
   categoryForm.reset();
+}
+
+function exportBackupData() {
+  // localStorage の本データとカテゴリデータだけを1つにまとめる
+  const backupData = {
+    books: getBooks(),
+    categories: getCategories()
+  };
+
+  // JSON文字列を見やすい形で作る
+  const jsonText = JSON.stringify(backupData, null, 2);
+  const blob = new Blob([jsonText], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(blob);
+
+  // 指定された形式でファイル名を作る
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const fileName = `backup_${year}${month}${day}.json`;
+
+  // 一時的な a 要素を使ってダウンロードを開始する
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = fileName;
+  link.click();
+
+  // 一時URLは使い終わったら解放する
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function importBackupData() {
+  const file = importBackupFile.files[0];
+
+  // ファイル未選択のまま復元を押した場合の対策
+  if (!file) {
+    alert("復元するJSONファイルを選択してください。");
+    return;
+  }
+
+  const isConfirmed = window.confirm("バックアップを復元すると、現在の本データとカテゴリデータは上書きされます。続けますか？");
+
+  if (!isConfirmed) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  // ファイル読み込み完了後にJSONを確認して保存する
+  reader.onload = function () {
+    try {
+      const backupData = JSON.parse(reader.result);
+
+      // 最低限の形式チェック
+      if (!backupData || !Array.isArray(backupData.books) || !Array.isArray(backupData.categories)) {
+        alert("JSONの形式が正しくありません。");
+        return;
+      }
+
+      // 復元後も「その他」が必ずあるようにしておく
+      if (!backupData.categories.includes(FALLBACK_CATEGORY)) {
+        backupData.categories.push(FALLBACK_CATEGORY);
+      }
+
+      // 既存データとの互換性を保つため、isRead が無い本は false 扱いにする
+      const normalizedBooks = backupData.books.map(function (book) {
+        return {
+          ...book,
+          isRead: Boolean(book.isRead)
+        };
+      });
+
+      saveBooks(normalizedBooks);
+      saveCategories(backupData.categories);
+
+      // 復元後はUIを最新状態にする
+      renderCategoryOptions();
+      renderCategoryFilterOptions();
+      renderCategoryList();
+      renderBooks();
+      closeFormModal();
+      closeDetailModal();
+
+      // 同じファイルを続けて選べるよう、選択状態を空に戻す
+      importBackupFile.value = "";
+    } catch (error) {
+      alert("JSONの読み込みに失敗しました。正しいバックアップファイルを選択してください。");
+    }
+  };
+
+  reader.readAsText(file);
 }
 
 function toggleCategoryDeleteMode() {
@@ -648,6 +764,21 @@ function updateListModeTabs() {
 
   showUnreadButton.setAttribute("aria-pressed", String(unreadActive));
   showReadButton.setAttribute("aria-pressed", String(readActive));
+}
+
+function updatePageModeTabs() {
+  const mainActive = currentPageMode === "main";
+  const backupActive = currentPageMode === "backup";
+
+  showMainPageButton.classList.toggle("active", mainActive);
+  showBackupPageButton.classList.toggle("active", backupActive);
+
+  showMainPageButton.setAttribute("aria-pressed", String(mainActive));
+  showBackupPageButton.setAttribute("aria-pressed", String(backupActive));
+
+  // 表示そのものは hidden の付け外しだけにして、既存構造を大きく変えない
+  mainPageContent.classList.toggle("hidden", !mainActive);
+  backupPageContent.classList.toggle("hidden", !backupActive);
 }
 
 function escapeHtml(text) {

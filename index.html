@@ -15,7 +15,32 @@
       <p>読みたい本を保存して、あとから見返せるシンプルなアプリです。</p>
     </header>
 
+    <!-- 画面全体の切り替えタブ -->
+    <!-- 普段使う一覧画面と、利用頻度の低いバックアップ画面を分ける -->
+    <section class="page-mode-section">
+      <div class="page-mode-tabs" role="tablist" aria-label="画面切り替え">
+        <button
+          id="show-main-page-button"
+          class="tab-button active"
+          type="button"
+          aria-pressed="true"
+        >
+          本の管理
+        </button>
+
+        <button
+          id="show-backup-page-button"
+          class="tab-button"
+          type="button"
+          aria-pressed="false"
+        >
+          バックアップ
+        </button>
+      </div>
+    </section>
+
     <main>
+      <div id="main-page-content">
       <!-- カテゴリ追加エリア -->
       <section class="category-section">
         <h2>カテゴリを追加</h2>
@@ -97,6 +122,33 @@
         <!-- JavaScriptで本のカードを追加していく場所 -->
         <!-- 一覧ではタイトル / 著者 / カテゴリだけを表示する -->
         <div id="book-list" class="book-list"></div>
+      </section>
+      </div>
+
+      <!-- バックアップ専用画面 -->
+      <!-- 利用頻度が低い機能なので、別画面に分離して普段の操作画面をすっきりさせる -->
+      <section id="backup-page-content" class="backup-page hidden">
+        <div class="backup-section">
+          <h2>バックアップ</h2>
+
+          <div class="backup-actions">
+            <button id="export-backup-button" type="button" class="sub-button">
+              バックアップ作成
+            </button>
+          </div>
+
+          <div class="backup-actions">
+            <!-- 復元前にファイルを選ぶ -->
+            <input id="import-backup-file" type="file" accept=".json">
+            <button id="import-backup-button" type="button" class="sub-button secondary-button">
+              バックアップ復元
+            </button>
+          </div>
+
+          <p class="backup-note">
+            復元すると現在の本データ・カテゴリデータは上書きされます。
+          </p>
+        </div>
       </section>
     </main>
 

@@ -1,0 +1,171 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>読みたい本リスト</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- アプリ全体を包むエリア -->
+  <div class="app">
+    <!-- 画面上部のタイトル -->
+    <header class="app-header">
+      <h1>読みたい本リスト</h1>
+      <p>読みたい本を保存して、あとから見返せるシンプルなアプリです。</p>
+    </header>
+
+    <main>
+      <!-- カテゴリ追加エリア -->
+      <section class="category-section">
+        <h2>カテゴリを追加</h2>
+
+        <!-- 新しいカテゴリ名を入力するフォーム -->
+        <form id="category-form" class="category-form">
+          <input
+            id="category-name"
+            name="categoryName"
+            type="text"
+            placeholder="例：小説"
+          >
+          <button type="submit" class="sub-button">カテゴリ追加</button>
+        </form>
+
+        <!-- カテゴリ削除モードの切り替えボタン -->
+        <button id="toggle-category-delete-button" type="button" class="sub-button secondary-button">
+          カテゴリ消去
+        </button>
+
+        <!-- 登録済みカテゴリを表示する場所 -->
+        <div id="category-list" class="category-list"></div>
+      </section>
+
+      <!-- 未読 / 読破 の切り替えUI -->
+      <section class="list-mode-section">
+        <div class="list-mode-tabs" role="tablist" aria-label="本の一覧切り替え">
+          <button
+            id="show-unread-button"
+            class="tab-button active"
+            type="button"
+            data-list-mode="unread"
+            aria-pressed="true"
+          >
+            未読
+          </button>
+
+          <button
+            id="show-read-button"
+            class="tab-button"
+            type="button"
+            data-list-mode="read"
+            aria-pressed="false"
+          >
+            読破
+          </button>
+        </div>
+      </section>
+
+      <!-- 本の一覧を表示するエリア -->
+      <section class="book-section">
+        <div class="section-header">
+          <h2 id="book-section-title">未読リスト</h2>
+
+          <!-- 並び替え方法を選ぶセレクトボックス -->
+          <div class="sort-area">
+            <label for="sort-select">並び順</label>
+            <select id="sort-select" class="sort-select">
+              <option value="author">著者名順</option>
+              <option value="createdAt">保存日順</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- カテゴリ絞り込み -->
+        <!-- カテゴリ追加後も、この select を再生成して即時反映する -->
+        <div class="filter-area">
+          <label for="filter-category-select">カテゴリ絞り込み</label>
+          <select id="filter-category-select" class="sort-select">
+            <option value="">すべて</option>
+          </select>
+        </div>
+
+        <!-- データが0件のときに表示するメッセージ -->
+        <p id="empty-message" class="empty-message">
+          まだ本が登録されていません。「＋」ボタンから追加してください。
+        </p>
+
+        <!-- JavaScriptで本のカードを追加していく場所 -->
+        <!-- 一覧ではタイトル / 著者 / カテゴリだけを表示する -->
+        <div id="book-list" class="book-list"></div>
+      </section>
+    </main>
+
+    <!-- 右下の追加ボタン -->
+    <button id="open-modal-button" class="add-button" type="button" aria-label="本を追加">
+      ＋
+    </button>
+  </div>
+
+  <!-- 本を追加・編集するモーダル -->
+  <div id="form-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="form-modal-title">本を追加</h2>
+        <button id="close-form-modal-button" class="close-button" type="button" aria-label="閉じる">
+          ×
+        </button>
+      </div>
+
+      <!-- 追加と編集で共通で使うフォーム -->
+      <form id="book-form" class="book-form">
+        <!-- 編集時に使う本ID -->
+        <input id="book-id" name="bookId" type="hidden">
+
+        <!-- 古いデータとの互換性を保つため、読破状態も保持できるようにする -->
+        <input id="book-is-read" name="bookIsRead" type="hidden" value="false">
+
+        <label for="title">タイトル <span class="required">必須</span></label>
+        <input id="title" name="title" type="text" placeholder="例：人を動かす" required>
+
+        <label for="author">著者 <span class="required">必須</span></label>
+        <input id="author" name="author" type="text" placeholder="例：デール・カーネギー" required>
+
+        <label for="publisher">出版社</label>
+        <input id="publisher" name="publisher" type="text" placeholder="例：創元社">
+
+        <label for="category">カテゴリ <span class="required">必須</span></label>
+        <select id="category" name="category" required></select>
+
+        <label for="memo">メモ</label>
+        <textarea id="memo" name="memo" rows="4" placeholder="気になる理由やあとで見返したい内容"></textarea>
+
+        <button class="save-button" type="submit">保存する</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 本の詳細を表示するモーダル -->
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>本の詳細</h2>
+        <button id="close-detail-modal-button" class="close-button" type="button" aria-label="閉じる">
+          ×
+        </button>
+      </div>
+
+      <!-- JavaScriptで詳細情報を入れる場所 -->
+      <div id="detail-content" class="detail-content"></div>
+
+      <!-- 編集・削除は一覧ではなく、この詳細画面だけに置く -->
+      <div class="detail-actions">
+        <button id="detail-edit-button" class="edit-button" type="button">編集</button>
+        <button id="detail-delete-button" class="delete-button" type="button">削除</button>
+        <button id="detail-read-toggle-button" class="save-button" type="button">読破にする</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

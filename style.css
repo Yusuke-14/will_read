@@ -1,0 +1,383 @@
+﻿/* 画面全体の基本設定 */
+body {
+  margin: 0;
+  font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+  background: #f4f1ea;
+  color: #222222;
+}
+
+/* 余白を持った中央エリア */
+.app {
+  min-height: 100vh;
+  padding: 20px 16px 80px;
+  box-sizing: border-box;
+}
+
+/* タイトル部分 */
+.app-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.app-header p {
+  margin: 0 0 24px;
+  color: #5f5a52;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* セクション共通 */
+.category-section,
+.book-section,
+.list-mode-section {
+  margin-bottom: 20px;
+}
+
+.category-section h2,
+.book-section h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+/* カテゴリ追加フォーム */
+.category-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.category-form input,
+.sort-select,
+.book-form input,
+.book-form textarea,
+.book-form select {
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid #d5cec4;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #fcfbf8;
+}
+
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ebe3d5;
+  font-size: 13px;
+}
+
+/* カテゴリ削除ボタンは小さくして、チップの横に置く */
+.category-delete-button {
+  border: none;
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #f0d9d5;
+  color: #8d2f1f;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 通常時はカテゴリ削除ボタンを隠し、消去モードのときだけ表示する */
+.category-delete-button.hidden-delete {
+  display: none;
+}
+
+/* 未読 / 読破 タブ */
+/* 機能は既存の切り替え処理を使い、見た目だけ押しやすく分かりやすくする */
+.list-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #e7dfd2;
+}
+
+.tab-button {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 12px;
+  background: transparent;
+  color: #5f5a52;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: #1f6f5f;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 見出しと並び替えUI */
+.section-header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.sort-area,
+.filter-area {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sort-area label,
+.filter-area label {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* 本の一覧 */
+.book-list {
+  display: grid;
+  gap: 12px;
+}
+
+.book-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* 一覧カード全体をタップできるようにする */
+.book-card-main {
+  cursor: pointer;
+}
+
+.book-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.book-card p {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.book-meta {
+  color: #5f5a52;
+}
+
+.category-tag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ebe3d5;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* 詳細画面の操作ボタン */
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.detail-actions .save-button {
+  grid-column: 1 / -1;
+}
+
+.edit-button,
+.delete-button,
+.sub-button,
+.save-button {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.edit-button,
+.sub-button,
+.save-button {
+  background: #1f6f5f;
+  color: #ffffff;
+}
+
+.delete-button {
+  background: #f0d9d5;
+  color: #8d2f1f;
+}
+
+.secondary-button {
+  background: #ded8cc;
+  color: #403a33;
+}
+
+.secondary-button.active {
+  background: #8d2f1f;
+  color: #ffffff;
+}
+
+/* データがないときのメッセージ */
+.empty-message {
+  margin: 0;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fffaf1;
+  color: #6d655b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 右下の追加ボタン */
+.add-button {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: #1f6f5f;
+  color: #ffffff;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(31, 111, 95, 0.35);
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px 24px;
+  box-sizing: border-box;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.close-button {
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+/* フォーム */
+.book-form {
+  display: grid;
+  gap: 10px;
+}
+
+.book-form label {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.book-form textarea {
+  resize: vertical;
+}
+
+.required {
+  color: #c4432b;
+  font-size: 12px;
+}
+
+/* 詳細表示 */
+.detail-content {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-item {
+  padding: 12px;
+  border-radius: 12px;
+  background: #fcfbf8;
+}
+
+.detail-item strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.detail-item p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+@media (min-width: 768px) {
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding-top: 32px;
+  }
+
+  .section-header {
+    grid-template-columns: 1fr 220px;
+    align-items: end;
+  }
+
+  .modal {
+    align-items: center;
+  }
+
+  .modal-content {
+    border-radius: 20px;
+  }
+}

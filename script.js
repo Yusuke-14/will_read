@@ -514,6 +514,12 @@ function renderBooks() {
     const bookCard = document.createElement("article");
     bookCard.className = "book-card";
 
+    // 保存日順が選ばれているときだけ、一覧にも保存日を表示する
+    const shouldShowCreatedDate = sortSelect.value === "createdAt";
+    const createdDateText = shouldShowCreatedDate
+      ? new Date(book.createdAt).toLocaleString("ja-JP")
+      : "";
+
     // 一覧ではカード本体だけを作り、編集・削除ボタンは生成しない
     const mainArea = document.createElement("div");
     mainArea.className = "book-card-main";
@@ -524,6 +530,7 @@ function renderBooks() {
     mainArea.innerHTML = `
       <h3>${escapeHtml(book.title)}</h3>
       <p class="book-meta"><strong>著者:</strong> ${escapeHtml(book.author)}</p>
+      ${shouldShowCreatedDate ? `<p class="book-meta"><strong>保存日:</strong> ${createdDateText}</p>` : ""}
       <div class="category-tag">${escapeHtml(book.category)}</div>
     `;
 

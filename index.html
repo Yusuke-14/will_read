@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- PWAとしてインストールできるように、manifest.json を読み込む -->
+  <link rel="manifest" href="manifest.json">
+  <!-- ブラウザや端末のUI色に使われるテーマカラー -->
+  <meta name="theme-color" content="#1f6f5f">
   <title>読みたい本リスト</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -219,5 +223,17 @@
   </div>
 
   <script src="script.js"></script>
+  <script>
+    // service worker は、アプリに必要なファイルを端末へ保存して
+    // PWAとして動きやすくするための仕組み
+    // 既存の localStorage データには触れず、静的ファイルだけを扱う
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./service-worker.js").catch(function (error) {
+          console.error("Service Worker の登録に失敗しました:", error);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

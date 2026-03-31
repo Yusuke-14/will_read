@@ -110,6 +110,17 @@
           </select>
         </div>
 
+        <!-- 一覧表示の切り替え -->
+        <!-- 並び順には入れず、別ボタンで著者別一覧へ移動する -->
+        <div class="list-action-area">
+          <button id="show-author-list-button" type="button" class="secondary-button action-button author-view-button">
+            著者別一覧
+          </button>
+          <button id="back-to-book-list-button" type="button" class="secondary-button action-button back-list-button hidden">
+            通常の一覧に戻る
+          </button>
+        </div>
+
         <!-- データが0件のときに表示するメッセージ -->
         <p id="empty-message" class="empty-message">
           まだ本が登録されていません。「＋」ボタンから追加してください。

@@ -211,6 +211,44 @@ body {
   margin-bottom: 12px;
 }
 
+.list-action-area {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8f4ed;
+}
+
+.action-button {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 15px;
+}
+
+/* 著者別一覧は「別の見方に切り替える」操作なので少し目立たせる */
+.author-view-button {
+  background: #e8f1ee;
+  color: #1f6f5f;
+  border: 1px solid #c7ddd7;
+}
+
+/* 戻るボタンは補助操作なので少し落ち着いた見た目にする */
+.back-list-button {
+  background: #f2ece2;
+  color: #4a443c;
+  border: 1px solid #ddd2c2;
+}
+
+@media (min-width: 768px) {
+  .list-action-area {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+}
+
 .sort-area label,
 .filter-area label {
   font-size: 14px;

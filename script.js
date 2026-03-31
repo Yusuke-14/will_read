@@ -18,6 +18,15 @@ let currentListMode = "unread";
 // main = 通常画面, category = カテゴリ編集画面, backup = バックアップ画面
 let currentPageMode = "main";
 
+// 一覧エリアの表示モード
+// books = 通常の本一覧
+// authors = 著者名だけの一覧
+// authorBooks = 選択した著者の本一覧
+let currentListViewMode = "books";
+
+// 著者別一覧から選ばれた著者名を保持する
+let currentSelectedAuthor = "";
+
 // 詳細モーダルで開いている本IDを保存する
 let currentDetailBookId = null;
 
@@ -30,6 +39,8 @@ const emptyMessage = document.getElementById("empty-message");
 const sortSelect = document.getElementById("sort-select");
 const filterCategorySelect = document.getElementById("filter-category-select");
 const bookSectionTitle = document.getElementById("book-section-title");
+const showAuthorListButton = document.getElementById("show-author-list-button");
+const backToBookListButton = document.getElementById("back-to-book-list-button");
 
 const categoryList = document.getElementById("category-list");
 const categoryForm = document.getElementById("category-form");
@@ -99,6 +110,20 @@ function setupEvents() {
   // 絞り込み変更時に一覧を再描画する
   filterCategorySelect.addEventListener("change", renderBooks);
 
+  // 著者別一覧への切り替え
+  showAuthorListButton.addEventListener("click", function () {
+    currentListViewMode = "authors";
+    currentSelectedAuthor = "";
+    renderBooks();
+  });
+
+  // 通常の本一覧へ戻る
+  backToBookListButton.addEventListener("click", function () {
+    currentListViewMode = "books";
+    currentSelectedAuthor = "";
+    renderBooks();
+  });
+
   // バックアップ機能は別画面へ移したので、ここで表示を切り替える
   showMainPageButton.addEventListener("click", function () {
     currentPageMode = "main";
@@ -119,12 +144,16 @@ function setupEvents() {
   showUnreadButton.addEventListener("click", function () {
     currentListMode = "unread";
     updateListModeTabs();
+    currentListViewMode = "books";
+    currentSelectedAuthor = "";
     renderBooks();
   });
 
   showReadButton.addEventListener("click", function () {
     currentListMode = "read";
     updateListModeTabs();
+    currentListViewMode = "books";
+    currentSelectedAuthor = "";
     renderBooks();
   });
 
@@ -616,12 +645,46 @@ function renderCategoryList() {
 }
 
 function renderBooks() {
-  const books = getSortedBooks();
-
   bookList.innerHTML = "";
+  updateListViewUI();
 
-  // 一覧の見出しも現在のモードに合わせて変える
+  if (currentListViewMode === "authors") {
+    renderAuthorSummaryList();
+    return;
+  }
+
+  if (currentListViewMode === "authorBooks") {
+    renderSelectedAuthorBooks();
+    return;
+  }
+
+  renderNormalBookList();
+}
+
+function updateListViewUI() {
+  // 通常一覧以外では、並び順とカテゴリ絞り込みを隠して状態を分かりやすくする
+  const isNormalBookList = currentListViewMode === "books";
+  sortSelect.closest(".sort-area").classList.toggle("hidden", !isNormalBookList);
+  filterCategorySelect.closest(".filter-area").classList.toggle("hidden", !isNormalBookList);
+
+  // 著者別表示中だけ、通常一覧へ戻るボタンを見せる
+  backToBookListButton.classList.toggle("hidden", isNormalBookList);
+
+  if (currentListViewMode === "authors") {
+    bookSectionTitle.textContent = "著者別一覧";
+    return;
+  }
+
+  if (currentListViewMode === "authorBooks") {
+    bookSectionTitle.textContent = currentSelectedAuthor + " の本一覧";
+    return;
+  }
+
   bookSectionTitle.textContent = currentListMode === "unread" ? "未読リスト" : "読破リスト";
+}
+
+function renderNormalBookList() {
+  const books = getSortedBooks();
 
   if (books.length === 0) {
     emptyMessage.classList.remove("hidden");
@@ -634,67 +697,144 @@ function renderBooks() {
   emptyMessage.classList.add("hidden");
 
   books.forEach(function (book) {
-    const bookCard = document.createElement("article");
-    bookCard.className = "book-card";
-
-    // 保存日順が選ばれているときだけ、一覧にも保存日を表示する
-    const shouldShowCreatedDate = sortSelect.value === "createdAt";
-    const createdDateText = shouldShowCreatedDate
-      ? new Date(book.createdAt).toLocaleString("ja-JP")
-      : "";
-
-    // 一覧ではカード本体だけを作り、編集・削除ボタンは生成しない
-    const mainArea = document.createElement("div");
-    mainArea.className = "book-card-main";
-    mainArea.addEventListener("click", function () {
-      openDetailModal(book.id);
-    });
-
-    mainArea.innerHTML = `
-      <h3>${escapeHtml(book.title)}</h3>
-      <p class="book-meta"><strong>著者:</strong> ${escapeHtml(book.author)}</p>
-      ${shouldShowCreatedDate ? `<p class="book-meta"><strong>保存日:</strong> ${createdDateText}</p>` : ""}
-      <div class="category-tag">${escapeHtml(book.category)}</div>
-    `;
-
-    bookCard.appendChild(mainArea);
-    bookList.appendChild(bookCard);
+    appendBookCard(book);
   });
 }
 
-function getSortedBooks() {
+function renderAuthorSummaryList() {
+  const books = getFilteredBooksByCurrentMode();
+
+  if (books.length === 0) {
+    emptyMessage.classList.remove("hidden");
+    emptyMessage.textContent = "この一覧に表示できる著者がまだありません。";
+    return;
+  }
+
+  emptyMessage.classList.add("hidden");
+
+  // 著者ごとの冊数を集計する
+  const authorCountMap = {};
+
+  books.forEach(function (book) {
+    if (!authorCountMap[book.author]) {
+      authorCountMap[book.author] = 0;
+    }
+
+    authorCountMap[book.author] += 1;
+  });
+
+  // 著者名は重複なしで、五十音順 / アルファベット順に並べる
+  const authors = Object.keys(authorCountMap).sort(function (a, b) {
+    return a.localeCompare(b, "ja");
+  });
+
+  authors.forEach(function (author) {
+    const authorCard = document.createElement("article");
+    authorCard.className = "book-card";
+
+    const authorButton = document.createElement("div");
+    authorButton.className = "book-card-main";
+    authorButton.innerHTML = `
+      <h3>${escapeHtml(author)}（${authorCountMap[author]}冊）</h3>
+    `;
+
+    authorButton.addEventListener("click", function () {
+      currentListViewMode = "authorBooks";
+      currentSelectedAuthor = author;
+      renderBooks();
+    });
+
+    authorCard.appendChild(authorButton);
+    bookList.appendChild(authorCard);
+  });
+}
+
+function renderSelectedAuthorBooks() {
+  const books = getFilteredBooksByCurrentMode().filter(function (book) {
+    return book.author === currentSelectedAuthor;
+  });
+
+  if (books.length === 0) {
+    emptyMessage.classList.remove("hidden");
+    emptyMessage.textContent = "この著者の本はまだありません。";
+    return;
+  }
+
+  emptyMessage.classList.add("hidden");
+
+  // 要件どおり、「著者名順」と同じルールで並べる
+  books.sort(function (a, b) {
+    return a.author.localeCompare(b.author, "ja");
+  });
+
+  books.forEach(function (book) {
+    appendBookCard(book);
+  });
+}
+
+function appendBookCard(book) {
+  const bookCard = document.createElement("article");
+  bookCard.className = "book-card";
+
+  // 保存日順が選ばれているときだけ、一覧にも保存日を表示する
+  const shouldShowCreatedDate = sortSelect.value === "createdAt" && currentListViewMode === "books";
+  const createdDateText = shouldShowCreatedDate
+    ? new Date(book.createdAt).toLocaleString("ja-JP")
+    : "";
+
+  // 一覧ではカード本体だけを作り、編集・削除ボタンは生成しない
+  const mainArea = document.createElement("div");
+  mainArea.className = "book-card-main";
+  mainArea.addEventListener("click", function () {
+    openDetailModal(book.id);
+  });
+
+  mainArea.innerHTML = `
+    <h3>${escapeHtml(book.title)}</h3>
+    <p class="book-meta"><strong>著者:</strong> ${escapeHtml(book.author)}</p>
+    ${shouldShowCreatedDate ? `<p class="book-meta"><strong>保存日:</strong> ${createdDateText}</p>` : ""}
+    <div class="category-tag">${escapeHtml(book.category)}</div>
+  `;
+
+  bookCard.appendChild(mainArea);
+  bookList.appendChild(bookCard);
+}
+
+function getFilteredBooksByCurrentMode() {
   const books = getBooks().slice();
-  const sortType = sortSelect.value;
   const selectedCategory = filterCategorySelect.value;
 
-  // 未読 / 読破 の切り替え
   const filteredByReadStatus = books.filter(function (book) {
     const bookIsRead = Boolean(book.isRead);
     return currentListMode === "read" ? bookIsRead : !bookIsRead;
   });
 
-  // カテゴリ絞り込み
-  const filteredBooks = filteredByReadStatus.filter(function (book) {
+  return filteredByReadStatus.filter(function (book) {
     if (!selectedCategory) {
       return true;
     }
 
     return book.category === selectedCategory;
   });
+}
+
+function getSortedBooks() {
+  const books = getFilteredBooksByCurrentMode();
+  const sortType = sortSelect.value;
 
   if (sortType === "createdAt") {
-    filteredBooks.sort(function (a, b) {
+    books.sort(function (a, b) {
       return b.createdAt - a.createdAt;
     });
 
-    return filteredBooks;
+    return books;
   }
 
-  filteredBooks.sort(function (a, b) {
+  books.sort(function (a, b) {
     return a.author.localeCompare(b.author, "ja");
   });
 
-  return filteredBooks;
+  return books;
 }
 
 function openDetailModal(bookId) {

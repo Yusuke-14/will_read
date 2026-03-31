@@ -1,5 +1,6 @@
 // キャッシュ名を分けておくと、将来更新したいときに切り替えやすい
-const CACHE_NAME = "want-to-read-app-v1";
+// 今回は更新通知の仕組みを入れたのでバージョンも上げる
+const CACHE_NAME = "want-to-read-app-v2";
 
 // PWAで最低限使う静的ファイルだけを保存する
 // localStorage の本データはここでは扱わない
@@ -20,6 +21,14 @@ self.addEventListener("install", function (event) {
       return cache.addAll(APP_SHELL_FILES);
     })
   );
+});
+
+// ページ側から skipWaiting の指示が来たら、waiting 状態を抜けて
+// 新しい service worker をすぐ有効化する
+self.addEventListener("message", function (event) {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // 古いキャッシュが残っていたら削除する

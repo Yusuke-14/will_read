@@ -11,6 +11,13 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- 新しいバージョンが見つかったときだけ表示する通知UI -->
+  <!-- 通常時は hidden のままなので、普段の操作は邪魔しない -->
+  <div id="update-banner" class="update-banner hidden">
+    <p>新しいバージョンがあります。</p>
+    <button id="update-app-button" type="button" class="sub-button">更新する</button>
+  </div>
+
   <!-- アプリ全体を包むエリア -->
   <div class="app">
     <!-- 画面上部のタイトル -->
@@ -239,9 +246,72 @@
     // PWAとして動きやすくするための仕組み
     // 既存の localStorage データには触れず、静的ファイルだけを扱う
     if ("serviceWorker" in navigator) {
+      const updateBanner = document.getElementById("update-banner");
+      const updateAppButton = document.getElementById("update-app-button");
+      let waitingServiceWorker = null;
+      let isReloadingForUpdate = false;
+
+      // waiting 状態の service worker を見つけたら、更新ボタン付きの通知を出す
+      function showUpdateBanner(worker) {
+        waitingServiceWorker = worker;
+        updateBanner.classList.remove("hidden");
+      }
+
+      // 初回表示時や iOS の復帰時にも、waiting がいないか確認する
+      function checkWaitingServiceWorker(registration) {
+        if (registration && registration.waiting) {
+          showUpdateBanner(registration.waiting);
+        }
+      }
+
+      // 更新ボタンを押したら、waiting 中の service worker に
+      // 「今すぐ有効化してよい」と伝える
+      updateAppButton.addEventListener("click", function () {
+        if (waitingServiceWorker) {
+          waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+        }
+      });
+
+      // 新しい service worker が有効化されたら、1回だけ自動で再読み込みする
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (isReloadingForUpdate) {
+          return;
+        }
+
+        isReloadingForUpdate = true;
+        window.location.reload();
+      });
+
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("./service-worker.js").catch(function (error) {
+        navigator.serviceWorker.register("./service-worker.js").then(function (registration) {
+          // ページを開いた時点ですでに waiting がいれば、すぐ通知を出す
+          checkWaitingServiceWorker(registration);
+
+          // 新しい service worker を検知したら、その状態変化を監視する
+          registration.addEventListener("updatefound", function () {
+            const installingWorker = registration.installing;
+
+            if (!installingWorker) {
+              return;
+            }
+
+            installingWorker.addEventListener("statechange", function () {
+              // すでに古い service worker が動いている状態で、
+              // 新しいものが installed になったら waiting 扱いになる
+              if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                checkWaitingServiceWorker(registration);
+              }
+            });
+          });
+        }).catch(function (error) {
           console.error("Service Worker の登録に失敗しました:", error);
+        });
+      });
+
+      // Safari / iOS PWA では、アプリ復帰時に waiting を再確認した方が確実
+      window.addEventListener("pageshow", function () {
+        navigator.serviceWorker.getRegistration("./service-worker.js").then(function (registration) {
+          checkWaitingServiceWorker(registration);
         });
       });
     }

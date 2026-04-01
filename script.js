@@ -77,6 +77,7 @@ const bookIsReadInput = document.getElementById("book-is-read");
 const titleInput = document.getElementById("title");
 const authorInput = document.getElementById("author");
 const authorSuggestions = document.getElementById("author-suggestions");
+const authorPredictList = document.getElementById("author-predict-list");
 const authorReadingGroup = document.getElementById("author-reading-group");
 const authorReadingInput = document.getElementById("author-reading");
 const authorReadingSuggestions = document.getElementById("author-reading-suggestions");
@@ -109,6 +110,7 @@ function setupEvents() {
   exportBackupButton.addEventListener("click", exportBackupData);
   importBackupButton.addEventListener("click", importBackupData);
   authorInput.addEventListener("input", handleAuthorInputChange);
+  authorInput.addEventListener("focus", handleAuthorInputChange);
 
   sortSelect.addEventListener("change", renderBooks);
 
@@ -196,6 +198,16 @@ function setupEvents() {
       closeDetailModal();
     }
   });
+
+  // 候補一覧の外側を押したら閉じる
+  document.addEventListener("click", function (event) {
+    const clickedAuthorInput = authorInput.contains(event.target);
+    const clickedPredictList = authorPredictList.contains(event.target);
+
+    if (!clickedAuthorInput && !clickedPredictList) {
+      hideAuthorPredictList();
+    }
+  });
 }
 
 // カテゴリデータが未保存なら初期値を入れる
@@ -226,6 +238,7 @@ function openAddModal() {
   renderCategoryOptions();
   renderAuthorSuggestions();
   updateAuthorReadingField();
+  hideAuthorPredictList();
   formModal.classList.remove("hidden");
 }
 
@@ -253,6 +266,7 @@ function openEditModal(bookId) {
 
   renderAuthorSuggestions();
   updateAuthorReadingField();
+  hideAuthorPredictList();
   formModal.classList.remove("hidden");
 }
 
@@ -263,6 +277,7 @@ function closeFormModal() {
   bookIsReadInput.value = "false";
   authorReadingInput.required = false;
   authorReadingGroup.classList.add("hidden");
+  hideAuthorPredictList();
 }
 
 function closeDetailModal() {
@@ -396,6 +411,7 @@ function handleCategorySubmit(event) {
 function handleAuthorInputChange() {
   // 著者入力に応じて読み欄の表示 / 非表示を切り替える
   updateAuthorReadingField();
+  renderAuthorPredictList();
 }
 
 function exportBackupData() {
@@ -621,6 +637,71 @@ function renderAuthorSuggestions() {
   });
 }
 
+function renderAuthorPredictList() {
+  const keyword = authorInput.value.trim();
+  const authorMap = buildAuthorReadingMap();
+
+  authorPredictList.innerHTML = "";
+
+  // 何も入力していないときは、ブラウザ標準の datalist を使える状態のままにする
+  if (!keyword) {
+    hideAuthorPredictList();
+    return;
+  }
+
+  // 著者名か読みのどちらかに一致する候補を拾う
+  const matchedAuthors = Object.keys(authorMap).filter(function (author) {
+    const readings = authorMap[author];
+    const normalizedKeyword = normalizeKanaForSearch(keyword);
+    const matchedAuthor = normalizeKanaForSearch(author).includes(normalizedKeyword);
+    const matchedReading = readings.some(function (reading) {
+      return normalizeKanaForSearch(reading).includes(normalizedKeyword);
+    });
+
+    return matchedAuthor || matchedReading;
+  }).sort(function (a, b) {
+    return compareTextForAuthor(a, getAuthorReadingFromMap(authorMap, a), b, getAuthorReadingFromMap(authorMap, b));
+  });
+
+  if (matchedAuthors.length === 0) {
+    hideAuthorPredictList();
+    return;
+  }
+
+  matchedAuthors.slice(0, 8).forEach(function (author) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "predict-item";
+
+    const reading = getAuthorReadingFromMap(authorMap, author);
+    item.innerHTML = `
+      <strong>${escapeHtml(author)}</strong>
+      <span>${escapeHtml(reading || "読み未設定")}</span>
+    `;
+
+    // 候補を選んだら、著者名と読みをフォームへ反映する
+    item.addEventListener("click", function () {
+      authorInput.value = author;
+
+      if (reading) {
+        authorReadingInput.value = reading;
+      }
+
+      updateAuthorReadingField();
+      hideAuthorPredictList();
+    });
+
+    authorPredictList.appendChild(item);
+  });
+
+  authorPredictList.classList.remove("hidden");
+}
+
+function hideAuthorPredictList() {
+  authorPredictList.classList.add("hidden");
+  authorPredictList.innerHTML = "";
+}
+
 function updateAuthorReadingField() {
   const author = authorInput.value.trim();
   const shouldShowReading = needsAuthorReading(author);
@@ -685,6 +766,22 @@ function buildAuthorReadingMap() {
   });
 
   return authorMap;
+}
+
+function getAuthorReadingFromMap(authorMap, author) {
+  if (!authorMap[author] || authorMap[author].length === 0) {
+    return "";
+  }
+
+  return authorMap[author][0];
+}
+
+function normalizeKanaForSearch(text) {
+  // 検索時だけ、ひらがなとカタカナを同じものとして扱う
+  // これにより「あ」で入力しても「ア」を含む著者名が候補に出る
+  return String(text).replace(/[ァ-ヶ]/g, function (char) {
+    return String.fromCharCode(char.charCodeAt(0) - 0x60);
+  });
 }
 
 function needsAuthorReading(author) {
@@ -983,6 +1080,14 @@ function compareBooksByAuthor(a, b) {
 function compareTextForAuthor(authorA, readingA, authorB, readingB) {
   const keyA = getAuthorSortKey(authorA, readingA);
   const keyB = getAuthorSortKey(authorB, readingB);
+  const groupWeightA = getAuthorScriptGroupWeight(keyA);
+  const groupWeightB = getAuthorScriptGroupWeight(keyB);
+
+  // まずは、ひらがな → カタカナ → アルファベット → その他 の順に並べる
+  if (groupWeightA !== groupWeightB) {
+    return groupWeightA - groupWeightB;
+  }
+
   const compareResult = keyA.localeCompare(keyB, "ja");
 
   if (compareResult !== 0) {
@@ -995,6 +1100,28 @@ function compareTextForAuthor(authorA, readingA, authorB, readingB) {
 function getAuthorSortKey(author, reading) {
   // 読みがある場合は読みを優先、無ければ著者名そのものを使う
   return String(reading || author || "");
+}
+
+function getAuthorScriptGroupWeight(text) {
+  const firstChar = String(text).trim().charAt(0);
+
+  if (!firstChar) {
+    return 99;
+  }
+
+  if (/[ぁ-ゖ]/.test(firstChar)) {
+    return 1;
+  }
+
+  if (/[ァ-ヶ]/.test(firstChar)) {
+    return 2;
+  }
+
+  if (/[a-zA-Z]/.test(firstChar)) {
+    return 3;
+  }
+
+  return 99;
 }
 
 function getAuthorReadingFromBooks(author) {
@@ -1013,41 +1140,70 @@ function getAuthorHeadingLabel(text) {
     return "その他";
   }
 
-  // カタカナはひらがなへ寄せてから判定する
-  const hiraChar = firstChar.replace(/[ァ-ヶ]/g, function (char) {
-    return String.fromCharCode(char.charCodeAt(0) - 0x60);
-  });
-
-  if ("あいうえおぁぃぅぇぉ".includes(hiraChar)) {
+  // ひらがなは、従来どおり「あ・か・さ...」で見出しを出す
+  if ("あいうえおぁぃぅぇぉ".includes(firstChar)) {
     return "あ";
   }
-  if ("かきくけこがぎぐげござじずぜぞ".includes(hiraChar)) {
+  if ("かきくけこがぎぐげござじずぜぞ".includes(firstChar)) {
     return "か";
   }
-  if ("さしすせそ".includes(hiraChar)) {
+  if ("さしすせそ".includes(firstChar)) {
     return "さ";
   }
-  if ("たちつてとだぢづでど".includes(hiraChar)) {
+  if ("たちつてとだぢづでど".includes(firstChar)) {
     return "た";
   }
-  if ("なにぬねの".includes(hiraChar)) {
+  if ("なにぬねの".includes(firstChar)) {
     return "な";
   }
-  if ("はひふへほばびぶべぼぱぴぷぺぽ".includes(hiraChar)) {
+  if ("はひふへほばびぶべぼぱぴぷぺぽ".includes(firstChar)) {
     return "は";
   }
-  if ("まみむめも".includes(hiraChar)) {
+  if ("まみむめも".includes(firstChar)) {
     return "ま";
   }
-  if ("やゆよゃゅょ".includes(hiraChar)) {
+  if ("やゆよゃゅょ".includes(firstChar)) {
     return "や";
   }
-  if ("らりるれろ".includes(hiraChar)) {
+  if ("らりるれろ".includes(firstChar)) {
     return "ら";
   }
-  if ("わをんゎ".includes(hiraChar)) {
+  if ("わをんゎ".includes(firstChar)) {
     return "わ";
   }
+
+  // カタカナは、ひらがなと混ぜずに「ア・カ・サ...」で別見出しにする
+  if ("アイウエオァィゥェォ".includes(firstChar)) {
+    return "ア";
+  }
+  if ("カキクケコガギグゲゴザジズゼゾ".includes(firstChar)) {
+    return "カ";
+  }
+  if ("サシスセソ".includes(firstChar)) {
+    return "サ";
+  }
+  if ("タチツテトダヂヅデド".includes(firstChar)) {
+    return "タ";
+  }
+  if ("ナニヌネノ".includes(firstChar)) {
+    return "ナ";
+  }
+  if ("ハヒフヘホバビブベボパピプペポ".includes(firstChar)) {
+    return "ハ";
+  }
+  if ("マミムメモ".includes(firstChar)) {
+    return "マ";
+  }
+  if ("ヤユヨャュョ".includes(firstChar)) {
+    return "ヤ";
+  }
+  if ("ラリルレロ".includes(firstChar)) {
+    return "ラ";
+  }
+  if ("ワヲンヮ".includes(firstChar)) {
+    return "ワ";
+  }
+
   if (/[a-zA-Z]/.test(firstChar)) {
     return "A-Z";
   }

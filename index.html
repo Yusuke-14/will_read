@@ -216,6 +216,8 @@
         <input id="author" name="author" type="text" placeholder="例：デール・カーネギー" list="author-suggestions" required>
         <!-- 既存データの著者名を候補表示する -->
         <datalist id="author-suggestions"></datalist>
+        <!-- 打ち込み中に、著者名や読みから候補を出す独自UI -->
+        <div id="author-predict-list" class="predict-list hidden"></div>
 
         <!-- 先頭が漢字のときだけ表示する読み入力欄 -->
         <div id="author-reading-group" class="author-reading-group hidden">

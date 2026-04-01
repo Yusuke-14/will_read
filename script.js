@@ -667,9 +667,9 @@ function renderAuthorPredictList() {
   const matchedAuthors = Object.keys(authorMap).filter(function (author) {
     const readings = authorMap[author];
     const normalizedKeyword = normalizeKanaForSearch(keyword);
-    const matchedAuthor = normalizeKanaForSearch(author).includes(normalizedKeyword);
+    const matchedAuthor = normalizeKanaForSearch(author).startsWith(normalizedKeyword);
     const matchedReading = readings.some(function (reading) {
-      return normalizeKanaForSearch(reading).includes(normalizedKeyword);
+      return normalizeKanaForSearch(reading).startsWith(normalizedKeyword);
     });
 
     return matchedAuthor || matchedReading;

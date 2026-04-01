@@ -76,6 +76,10 @@ const bookIdInput = document.getElementById("book-id");
 const bookIsReadInput = document.getElementById("book-is-read");
 const titleInput = document.getElementById("title");
 const authorInput = document.getElementById("author");
+const authorSuggestions = document.getElementById("author-suggestions");
+const authorReadingGroup = document.getElementById("author-reading-group");
+const authorReadingInput = document.getElementById("author-reading");
+const authorReadingSuggestions = document.getElementById("author-reading-suggestions");
 const publisherInput = document.getElementById("publisher");
 const categorySelect = document.getElementById("category");
 const memoInput = document.getElementById("memo");
@@ -104,6 +108,7 @@ function setupEvents() {
   toggleCategoryDeleteButton.addEventListener("click", toggleCategoryDeleteMode);
   exportBackupButton.addEventListener("click", exportBackupData);
   importBackupButton.addEventListener("click", importBackupData);
+  authorInput.addEventListener("input", handleAuthorInputChange);
 
   sortSelect.addEventListener("change", renderBooks);
 
@@ -219,6 +224,8 @@ function openAddModal() {
   formModalTitle.textContent = "本を追加";
 
   renderCategoryOptions();
+  renderAuthorSuggestions();
+  updateAuthorReadingField();
   formModal.classList.remove("hidden");
 }
 
@@ -239,10 +246,13 @@ function openEditModal(bookId) {
   bookIsReadInput.value = String(Boolean(targetBook.isRead));
   titleInput.value = targetBook.title;
   authorInput.value = targetBook.author;
+  authorReadingInput.value = targetBook.reading || "";
   publisherInput.value = targetBook.publisher;
   categorySelect.value = targetBook.category;
   memoInput.value = targetBook.memo;
 
+  renderAuthorSuggestions();
+  updateAuthorReadingField();
   formModal.classList.remove("hidden");
 }
 
@@ -251,6 +261,8 @@ function closeFormModal() {
   bookForm.reset();
   bookIdInput.value = "";
   bookIsReadInput.value = "false";
+  authorReadingInput.required = false;
+  authorReadingGroup.classList.add("hidden");
 }
 
 function closeDetailModal() {
@@ -265,6 +277,7 @@ function handleBookSubmit(event) {
   const id = bookIdInput.value;
   const title = titleInput.value.trim();
   const author = authorInput.value.trim();
+  const reading = authorReadingInput.value.trim();
   const publisher = publisherInput.value.trim();
   const category = categorySelect.value;
   const memo = memoInput.value.trim();
@@ -275,12 +288,18 @@ function handleBookSubmit(event) {
     return;
   }
 
+  // 著者名の先頭が漢字なら、読みを必須にする
+  if (needsAuthorReading(author) && !reading) {
+    alert("著者名の先頭が漢字の場合は、著者のよみを入力してください。");
+    return;
+  }
+
   const books = getBooks();
 
   if (id) {
-    updateBook(books, id, title, author, publisher, category, memo, isRead);
+    updateBook(books, id, title, author, reading, publisher, category, memo, isRead);
   } else {
-    addBook(books, title, author, publisher, category, memo);
+    addBook(books, title, author, reading, publisher, category, memo);
   }
 
   saveBooks(books);
@@ -288,12 +307,13 @@ function handleBookSubmit(event) {
   closeFormModal();
 }
 
-function addBook(books, title, author, publisher, category, memo) {
+function addBook(books, title, author, reading, publisher, category, memo) {
   // 新規データは必ず未読で作成する
   const newBook = {
     id: Date.now().toString(),
     title: title,
     author: author,
+    reading: reading,
     publisher: publisher,
     memo: memo,
     category: category,
@@ -304,7 +324,7 @@ function addBook(books, title, author, publisher, category, memo) {
   books.unshift(newBook);
 }
 
-function updateBook(books, id, title, author, publisher, category, memo, isRead) {
+function updateBook(books, id, title, author, reading, publisher, category, memo, isRead) {
   const targetIndex = books.findIndex(function (book) {
     return book.id === id;
   });
@@ -317,6 +337,7 @@ function updateBook(books, id, title, author, publisher, category, memo, isRead)
     ...books[targetIndex],
     title: title,
     author: author,
+    reading: reading,
     publisher: publisher,
     memo: memo,
     category: category,
@@ -370,6 +391,11 @@ function handleCategorySubmit(event) {
   renderCategoryFilterOptions();
   renderCategoryList();
   categoryForm.reset();
+}
+
+function handleAuthorInputChange() {
+  // 著者入力に応じて読み欄の表示 / 非表示を切り替える
+  updateAuthorReadingField();
 }
 
 function exportBackupData() {
@@ -438,7 +464,9 @@ function importBackupData() {
       const normalizedBooks = backupData.books.map(function (book) {
         return {
           ...book,
-          isRead: Boolean(book.isRead)
+          isRead: Boolean(book.isRead),
+          // 古いバックアップに reading が無くても空文字で受ける
+          reading: typeof book.reading === "string" ? book.reading : ""
         };
       });
 
@@ -537,7 +565,9 @@ function getBooks() {
   return JSON.parse(savedData).map(function (book) {
     return {
       ...book,
-      isRead: Boolean(book.isRead)
+      isRead: Boolean(book.isRead),
+      // 旧データとの互換性: reading が無い本もそのまま使えるようにする
+      reading: typeof book.reading === "string" ? book.reading : ""
     };
   });
 }
@@ -576,6 +606,90 @@ function renderCategoryOptions() {
     option.textContent = category;
     categorySelect.appendChild(option);
   });
+}
+
+function renderAuthorSuggestions() {
+  const authorMap = buildAuthorReadingMap();
+  authorSuggestions.innerHTML = "";
+
+  Object.keys(authorMap).sort(function (a, b) {
+    return compareTextForAuthor(a, "", b, "");
+  }).forEach(function (author) {
+    const option = document.createElement("option");
+    option.value = author;
+    authorSuggestions.appendChild(option);
+  });
+}
+
+function updateAuthorReadingField() {
+  const author = authorInput.value.trim();
+  const shouldShowReading = needsAuthorReading(author);
+
+  // 漢字始まりのときだけ読み欄を表示し、必須にする
+  authorReadingGroup.classList.toggle("hidden", !shouldShowReading);
+  authorReadingInput.required = shouldShowReading;
+
+  if (!shouldShowReading) {
+    authorReadingInput.value = "";
+    authorReadingSuggestions.innerHTML = "";
+    return;
+  }
+
+  renderAuthorReadingSuggestions(author);
+}
+
+function renderAuthorReadingSuggestions(author) {
+  const authorMap = buildAuthorReadingMap();
+  const matchedReadings = [];
+
+  authorReadingSuggestions.innerHTML = "";
+
+  Object.keys(authorMap).forEach(function (savedAuthor) {
+    if (savedAuthor === author || savedAuthor.includes(author) || author.includes(savedAuthor)) {
+      authorMap[savedAuthor].forEach(function (reading) {
+        if (!matchedReadings.includes(reading)) {
+          matchedReadings.push(reading);
+        }
+      });
+    }
+  });
+
+  matchedReadings.forEach(function (reading) {
+    const option = document.createElement("option");
+    option.value = reading;
+    authorReadingSuggestions.appendChild(option);
+  });
+
+  // 同じ著者名がすでに登録されていれば、読みを補助入力する
+  if (authorMap[author] && authorMap[author].length === 1 && !authorReadingInput.value.trim()) {
+    authorReadingInput.value = authorMap[author][0];
+  }
+}
+
+function buildAuthorReadingMap() {
+  const books = getBooks();
+  const authorMap = {};
+
+  books.forEach(function (book) {
+    if (!book.author) {
+      return;
+    }
+
+    if (!authorMap[book.author]) {
+      authorMap[book.author] = [];
+    }
+
+    if (book.reading && !authorMap[book.author].includes(book.reading)) {
+      authorMap[book.author].push(book.reading);
+    }
+  });
+
+  return authorMap;
+}
+
+function needsAuthorReading(author) {
+  // 先頭が漢字なら読み入力を求める
+  return /^[\u4E00-\u9FFF々]/.test(String(author).trim());
 }
 
 function renderCategoryFilterOptions() {
@@ -696,7 +810,22 @@ function renderNormalBookList() {
 
   emptyMessage.classList.add("hidden");
 
+  let lastHeading = "";
+
   books.forEach(function (book) {
+    // 著者名順のときだけ、読みの先頭を使った見出しを出す
+    if (sortSelect.value === "author") {
+      const headingLabel = getAuthorHeadingLabel(book.reading || book.author);
+
+      if (headingLabel !== lastHeading) {
+        const heading = document.createElement("p");
+        heading.className = "author-group-heading";
+        heading.textContent = headingLabel;
+        bookList.appendChild(heading);
+        lastHeading = headingLabel;
+      }
+    }
+
     appendBookCard(book);
   });
 }
@@ -725,10 +854,22 @@ function renderAuthorSummaryList() {
 
   // 著者名は重複なしで、五十音順 / アルファベット順に並べる
   const authors = Object.keys(authorCountMap).sort(function (a, b) {
-    return a.localeCompare(b, "ja");
+    return compareTextForAuthor(a, getAuthorReadingFromBooks(a), b, getAuthorReadingFromBooks(b));
   });
 
+  let lastHeading = "";
+
   authors.forEach(function (author) {
+    const headingLabel = getAuthorHeadingLabel(getAuthorReadingFromBooks(author) || author);
+
+    if (headingLabel !== lastHeading) {
+      const heading = document.createElement("p");
+      heading.className = "author-group-heading";
+      heading.textContent = headingLabel;
+      bookList.appendChild(heading);
+      lastHeading = headingLabel;
+    }
+
     const authorCard = document.createElement("article");
     authorCard.className = "book-card";
 
@@ -764,7 +905,7 @@ function renderSelectedAuthorBooks() {
 
   // 要件どおり、「著者名順」と同じルールで並べる
   books.sort(function (a, b) {
-    return a.author.localeCompare(b.author, "ja");
+    return compareBooksByAuthor(a, b);
   });
 
   books.forEach(function (book) {
@@ -830,11 +971,88 @@ function getSortedBooks() {
     return books;
   }
 
-  books.sort(function (a, b) {
-    return a.author.localeCompare(b.author, "ja");
-  });
+  books.sort(compareBooksByAuthor);
 
   return books;
+}
+
+function compareBooksByAuthor(a, b) {
+  return compareTextForAuthor(a.author, a.reading, b.author, b.reading);
+}
+
+function compareTextForAuthor(authorA, readingA, authorB, readingB) {
+  const keyA = getAuthorSortKey(authorA, readingA);
+  const keyB = getAuthorSortKey(authorB, readingB);
+  const compareResult = keyA.localeCompare(keyB, "ja");
+
+  if (compareResult !== 0) {
+    return compareResult;
+  }
+
+  return String(authorA).localeCompare(String(authorB), "ja");
+}
+
+function getAuthorSortKey(author, reading) {
+  // 読みがある場合は読みを優先、無ければ著者名そのものを使う
+  return String(reading || author || "");
+}
+
+function getAuthorReadingFromBooks(author) {
+  const books = getBooks();
+  const matchedBook = books.find(function (book) {
+    return book.author === author && book.reading;
+  });
+
+  return matchedBook ? matchedBook.reading : "";
+}
+
+function getAuthorHeadingLabel(text) {
+  const firstChar = String(text).trim().charAt(0);
+
+  if (!firstChar) {
+    return "その他";
+  }
+
+  // カタカナはひらがなへ寄せてから判定する
+  const hiraChar = firstChar.replace(/[ァ-ヶ]/g, function (char) {
+    return String.fromCharCode(char.charCodeAt(0) - 0x60);
+  });
+
+  if ("あいうえおぁぃぅぇぉ".includes(hiraChar)) {
+    return "あ";
+  }
+  if ("かきくけこがぎぐげござじずぜぞ".includes(hiraChar)) {
+    return "か";
+  }
+  if ("さしすせそ".includes(hiraChar)) {
+    return "さ";
+  }
+  if ("たちつてとだぢづでど".includes(hiraChar)) {
+    return "た";
+  }
+  if ("なにぬねの".includes(hiraChar)) {
+    return "な";
+  }
+  if ("はひふへほばびぶべぼぱぴぷぺぽ".includes(hiraChar)) {
+    return "は";
+  }
+  if ("まみむめも".includes(hiraChar)) {
+    return "ま";
+  }
+  if ("やゆよゃゅょ".includes(hiraChar)) {
+    return "や";
+  }
+  if ("らりるれろ".includes(hiraChar)) {
+    return "ら";
+  }
+  if ("わをんゎ".includes(hiraChar)) {
+    return "わ";
+  }
+  if (/[a-zA-Z]/.test(firstChar)) {
+    return "A-Z";
+  }
+
+  return "その他";
 }
 
 function openDetailModal(bookId) {

@@ -300,6 +300,21 @@ body {
   font-weight: bold;
 }
 
+/* 著者の読み入力欄 */
+.author-reading-group {
+  display: grid;
+  gap: 6px;
+}
+
+/* 著者名順 / 著者別一覧の見出し */
+.author-group-heading {
+  margin: 6px 0 0;
+  padding: 8px 4px 2px;
+  color: #1f6f5f;
+  font-size: 14px;
+  font-weight: bold;
+}
+
 /* 詳細画面の操作ボタン */
 .detail-actions {
   display: grid;

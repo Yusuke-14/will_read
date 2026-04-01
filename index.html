@@ -213,7 +213,24 @@
         <input id="title" name="title" type="text" placeholder="例：人を動かす" required>
 
         <label for="author">著者 <span class="required">必須</span></label>
-        <input id="author" name="author" type="text" placeholder="例：デール・カーネギー" required>
+        <input id="author" name="author" type="text" placeholder="例：デール・カーネギー" list="author-suggestions" required>
+        <!-- 既存データの著者名を候補表示する -->
+        <datalist id="author-suggestions"></datalist>
+
+        <!-- 先頭が漢字のときだけ表示する読み入力欄 -->
+        <div id="author-reading-group" class="author-reading-group hidden">
+          <label for="author-reading">著者のよみ <span class="required">必須</span></label>
+          <input
+            id="author-reading"
+            name="authorReading"
+            type="text"
+            inputmode="kana"
+            placeholder="例：ひがしのけいご"
+            list="author-reading-suggestions"
+          >
+          <!-- 著者名に対応する読み候補をここへ入れる -->
+          <datalist id="author-reading-suggestions"></datalist>
+        </div>
 
         <label for="publisher">出版社</label>
         <input id="publisher" name="publisher" type="text" placeholder="例：創元社">

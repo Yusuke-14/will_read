@@ -317,6 +317,10 @@ function handleBookSubmit(event) {
     addBook(books, title, author, reading, publisher, category, memo);
   }
 
+  // 同じ著者名の本が複数ある場合は、
+  // どれか1冊で読みを更新したら他の本にも同じ読みを反映する
+  syncAuthorReadingAcrossBooks(books, author, reading);
+
   saveBooks(books);
   renderBooks();
   closeFormModal();
@@ -359,6 +363,16 @@ function updateBook(books, id, title, author, reading, publisher, category, memo
     // 古いデータに isRead が無くてもここで補える
     isRead: Boolean(isRead)
   };
+}
+
+function syncAuthorReadingAcrossBooks(books, author, reading) {
+  // 著者名が同じ本を全部見つけて、reading をそろえる
+  // これにより「東野圭吾」の読みを1冊で直すと、他の東野圭吾の本にも反映される
+  books.forEach(function (book) {
+    if (book.author === author) {
+      book.reading = reading;
+    }
+  });
 }
 
 function deleteBook(bookId) {
